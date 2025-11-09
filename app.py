@@ -198,12 +198,15 @@ def display_reservation_tab():
             buffer_status = "Critical (High Demand)"
             status_color = "red"
         
+        # Display Core Metric (Fixed API Exception by removing delta/delta_color)
         st.metric(
             label=f"Total Reservations for {selected_meal}",
             value=f"{current_bookings} / {MAX_CAPACITY}",
-            delta=f"{available_slots} Slots Remaining",
-            delta_color=status_color
         )
+        
+        # Display Slots Remaining and Status explicitly using Markdown for colored text
+        st.markdown(f"### Slots Remaining: :{status_color}[{available_slots}]")
+        st.markdown(f"**Wastage Buffer Status:** :{status_color}[{buffer_status}]")
         
         st.markdown("---")
         st.markdown(f"""
