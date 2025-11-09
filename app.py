@@ -3,11 +3,29 @@ from datetime import datetime, timedelta
 import random
 import time
 
+# --- CONFIGURATION (MUST BE FIRST) ---
+# Set the page to use wide layout for maximum screen usage
+st.set_page_config(layout="wide", page_title="MessServe: Smart Meal Booking")
+
 # --- CUSTOM CSS THEME (Modern University Feel: Deep Purple / Orange Accents) ---
 
 CSS_STYLE = """
 <style>
 
+/* --- 1. FULL SCREEN LAYOUT OVERRIDE --- */
+/* Remove Max-Width and Padding from main container */
+.main .block-container {
+    max-width: 100% !important;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 1rem;
+}
+/* Center content within the Streamlit columns for cleaner flow */
+div.st-emotion-cache-1pxn4x8 {
+    width: 100% !important;
+}
+
+/* --- 2. COLOR AND THEME STYLING --- */
 /* Main App Background */
 [data-testid="stAppViewContainer"] {
     background-color: #F8F8FF; /* Ghost White (very light base) */
@@ -85,7 +103,7 @@ h3 {
 """
 st.markdown(CSS_STYLE, unsafe_allow_html=True)
 
-# --- CONFIGURATION ---
+# --- CONFIGURATION CONTINUED ---
 MEAL_TIMES = ["Breakfast", "Lunch", "Dinner"]
 MAX_CAPACITY = 2000
 MIN_RESERVATION_BUFFER = 100 
@@ -120,26 +138,25 @@ init_data_state()
 # --- UI COMPONENTS AND LOGIC ---
 
 def get_meal_date_options():
-    """Generates next 7 meal slot options (B/L/D)."""
+    """Generates next meal slot options (B/L/D) for the next 3 days."""
     options = []
     
-    # 1. Start from the next available meal time
     now = datetime.now()
     current_time_str = now.strftime("%H:%M")
     
-    # Check if today's lunch/dinner slots are still open
+    # Check if today's lunch/dinner slots are still open based on cutoffs
     if now.hour < 10 and current_time_str < "10:00": # Cutoff time 10 AM for lunch
         options.append((TODAY, "Lunch"))
     if now.hour < 16 and current_time_str < "16:00": # Cutoff time 4 PM for dinner
         options.append((TODAY, "Dinner"))
 
-    # Add tomorrow's meals and future days
-    for i in range(1, 4): # Next 3 days
+    # Add tomorrow's meals and future days (up to 3 days ahead)
+    for i in range(1, 4):
         date = TODAY + timedelta(days=i)
         for meal in MEAL_TIMES:
             options.append((date, meal))
 
-    # Format for display: "Today, Lunch (Current Menu)" or "Mon 11/11, Dinner"
+    # Format for display: "Today, Lunch" or "Mon 11/11, Dinner"
     formatted_options = []
     for date, meal in options:
         date_str = "Today" if date == TODAY else date.strftime("%a %m/%d")
@@ -155,9 +172,10 @@ def display_reservation_tab():
     meal_options, formatted_options = get_meal_date_options()
 
     if not meal_options:
-        st.warning("All booking slots for the next 24 hours are currently closed or passed.")
+        st.warning("All booking slots for the next available window are currently closed or passed.")
         return
 
+    # Use columns to divide the booking interface
     col1, col2 = st.columns([2, 3])
 
     with col1:
@@ -172,7 +190,7 @@ def display_reservation_tab():
         
         is_booked = slot_key in st.session_state.student_bookings[SESSION_ID]
         
-        st.markdown(f"**Your Session ID:** `{SESSION_ID}`", help="Use this to identify your bookings.")
+        st.markdown(f"**Your Session ID:** `{SESSION_ID}`", help="This ID tracks your unique reservations.")
         
         st.markdown("---")
         
@@ -198,20 +216,20 @@ def display_reservation_tab():
             buffer_status = "Critical (High Demand)"
             status_color = "red"
         
-        # Display Core Metric (Fixed API Exception by removing delta/delta_color)
+        # Display Core Metric
         st.metric(
             label=f"Total Reservations for {selected_meal}",
             value=f"{current_bookings} / {MAX_CAPACITY}",
         )
         
         # Display Slots Remaining and Status explicitly using Markdown for colored text
-        st.markdown(f"### Slots Remaining: :{status_color}[{available_slots}]")
+        st.markdown(f"## Slots Remaining: :{status_color}[{available_slots}]")
         st.markdown(f"**Wastage Buffer Status:** :{status_color}[{buffer_status}]")
         
         st.markdown("---")
         st.markdown(f"""
         <div class="info-box">
-            <h4>Wastage Reduction Status: {buffer_status}</h4>
+            <h4>Wastage Reduction Focus</h4>
             <p>We need accurate bookings to prevent ordering extra food beyond the reserved total.</p>
             <ul>
                 <li>Demand is tracked against maximum hall capacity.</li>
